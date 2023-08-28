@@ -2,7 +2,7 @@
 //  ViewController.swift
 //  Calendar
 //
-//  Created by 金融研發一部-楊雅婷 on 2023/7/7.
+//  Created by Vicki Yang on 2023/7/7.
 //
 
 import UIKit
@@ -10,105 +10,29 @@ import EventKit
 import EventKitUI
 
 class ViewController: UIViewController {
-    var startDate = "202308171800".toDate()
-    var endDate = "202308181800".toDate()
+    let eventManager = CalendarManager()
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view.
+    }
+    
+    @IBAction func ShowEditViewBtn(_ sender: Any) {
+        eventManager.sendCalendarEvent(self, title: "edit Event", startTime: "202308240700", endTime: "202308241400", notes: "備註欄", alarmTime: 8)
     }
     
     @IBAction func AddEventBtn(_ sender: Any) {
-        // 1 初始化
-        let eventStore = EKEventStore()
-        
-        // 2 請求許可權
-        switch EKEventStore.authorizationStatus(for: .event) {
-        case .authorized:
-            showEditEventView(eventStore)
-//            insertEvent(eventStore)
-        case .denied:
-            print("vvv_Access denied")
-        case .notDetermined:
-            // 3 初次請求權限許可
-            eventStore.requestAccess(to: .event, completion: { [weak self] (granted, error) in
-                guard let self = self else { return }
-                if granted && error == nil {
-                    DispatchQueue.main.async {
-                        self.showEditEventView(eventStore)
-                        self.insertEvent(eventStore)
-                    }
-                } else {
-                    print("vvv_Access denied")
-                }
-            })
-        default:
-            print("vvv_Case default")
-        }
-    }
-    
-    // 顯示行事曆編輯頁
-    func showEditEventView(_ eventStore: EKEventStore) {
-        let eventController = EKEventEditViewController()
-        eventController.eventStore = eventStore
-        
-        let event = EKEvent(eventStore: eventStore)
-        event.startDate = startDate
-        event.endDate = endDate//startDate.addingTimeInterval(3600) // 添加一小時的時間
-        event.title = "行事曆規格"
-        event.notes = "備註"
-        let alarm = EKAlarm(relativeOffset: -60 * 5) //事件前5min提醒
-        event.addAlarm(alarm)
-        
-        eventController.event = event
-        eventController.editViewDelegate = self
-        
-        self.present(eventController, animated: true, completion: nil)
-    }
-    
-    // 背景新增行事曆Event
-    func insertEvent(_ eventStore: EKEventStore) {
-        let event:EKEvent = EKEvent(eventStore: eventStore)
-        
-        // 設定時間區間
-//        startDate = Date().addingTimeInterval(1 * 60 * 60) // 1hr後開始
-//        endDate = startDate.addingTimeInterval(2 * 60 * 60) // 持續2hr
-        event.title = "行事曆規格"
-//        event.startDate = startDate
-//        event.endDate = endDate
-        
-        // 設定全天
-//        event.isAllDay = true
-//        let date = Date()
-//        event.startDate = Calendar.current.startOfDay(for: date)
-//        event.endDate = Calendar.current.startOfDay(for: date)
-        
-        
-        // 設定小時
-        event.startDate = startDate
-        event.endDate = endDate
-        event.notes = "This is a note"
-        event.calendar = eventStore.defaultCalendarForNewEvents
-        
-        // 提醒時間
-        let alarm = EKAlarm(relativeOffset: -60 * 10) //事件前10min提醒
-        event.addAlarm(alarm)
-        
-        do {
-            try eventStore.save(event, span: .thisEvent)
-            
-            /*
-            DispatchQueue.main.async {
-                let alert = UIAlertController(title: "提醒", message: "日曆事件已添加，將在1小時後提醒您！", preferredStyle: .alert)
+        eventManager.sendCalendarEvent(self, title: "add Event", startTime: "202308220700", endTime: "202308221400", notes: "備註欄", alarmTime: 8, isShowEditView: false) { result in
+            switch result {
+            case .success():
+                let alert = UIAlertController(title: "提醒", message: "行事曆事件已添加！", preferredStyle: .alert)
                 alert.addAction(UIAlertAction(title: "確定", style: .default, handler: nil))
                 self.present(alert, animated: true)
+            case .failure(let error):
+                print("Error：\(error.localizedDescription)")
             }
-             */
-        } catch let error as NSError {
-            print("vvv_failed to save event with error : \(error)")
         }
-        print("vvv_Saved Event")
     }
+    
 }
 
 extension ViewController: EKEventEditViewDelegate {
@@ -117,20 +41,106 @@ extension ViewController: EKEventEditViewDelegate {
     }
 }
 
+// MARK: - CalendarManager
+
+struct CalendarEvent {
+    let title: String
+    let startTime: String
+    let endTime: String
+    let notes: String
+    let alarmTime: Double
+    
+    var startDate: Date {
+        return startTime.yyyyMMddHHmmToDate()
+    }
+    
+    var endDate: Date {
+        return endTime.yyyyMMddHHmmToDate()
+    }
+}
+
+class CalendarManager {
+    func sendCalendarEvent(_ sourceVC: UIViewController, title: String = "", startTime: String = "", endTime: String = "", notes: String = "", alarmTime: Double = 0, isShowEditView: Bool = true, completion: ((Result<Void, Error>) -> Void)? = nil) {
+        let calendarEvent = CalendarEvent(title: title, startTime: startTime, endTime: endTime, notes: notes, alarmTime: alarmTime)
+        
+        let eventStore = EKEventStore()
+        switch EKEventStore.authorizationStatus(for: .event) {
+        case .authorized:
+            // 已授權
+            DispatchQueue.main.async {
+                isShowEditView ? self.showEditView(eventStore, calendarEvent: calendarEvent, sourceVC: sourceVC) : self.insertEvent(eventStore, calendarEvent: calendarEvent, completion: completion)
+            }
+        case .denied:
+            // 拒絕授權
+            let alert = UIAlertController(title: "提醒", message: "請去系統設定開啟行事曆權限！", preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "確定", style: .default, handler: nil))
+            sourceVC.present(alert, animated: true)
+        case .notDetermined:
+            // 初次請求權限許可
+            eventStore.requestAccess(to: .event, completion: { [weak self] (granted, error) in
+                guard let self = self else { return }
+                if granted {
+                    DispatchQueue.main.async {
+                        isShowEditView ? self.showEditView(eventStore, calendarEvent: calendarEvent, sourceVC: sourceVC) : self.insertEvent(eventStore, calendarEvent: calendarEvent, completion: completion)
+                    }
+                } else {
+                    print("Calendar Access denied")
+                }
+            })
+        default:
+            print("Calendar Case default")
+        }
+    }
+    
+    // 顯示行事曆編輯頁
+    private func showEditView(_ eventStore: EKEventStore, calendarEvent: CalendarEvent, sourceVC: UIViewController) {
+        let event = createEKEvent(eventStore, calendarEvent: calendarEvent)
+        let eventController = EKEventEditViewController()
+        eventController.eventStore = eventStore
+        eventController.event = event
+        eventController.editViewDelegate = sourceVC as? any EKEventEditViewDelegate
+        sourceVC.present(eventController, animated: true, completion: nil)
+    }
+    
+    // 背景新增行事曆Event
+    private func insertEvent(_ eventStore: EKEventStore, calendarEvent: CalendarEvent, completion: ((Result<Void, Error>) -> Void)? = nil) {
+        do {
+            let event = createEKEvent(eventStore, calendarEvent: calendarEvent)
+            try eventStore.save(event, span: .thisEvent)
+            completion?(.success(()))
+        } catch let error as NSError {
+            completion?(.failure(error))
+        }
+    }
+    
+    // 創建event物件 (注意：一定要等用戶允許授權後才可以創建)
+    private func createEKEvent(_ eventStore: EKEventStore, calendarEvent: CalendarEvent) -> EKEvent {
+        let event = EKEvent(eventStore: eventStore)
+        event.startDate = calendarEvent.startDate
+        event.endDate = calendarEvent.endDate
+        event.title = calendarEvent.title
+        event.notes = calendarEvent.notes
+        event.calendar = eventStore.defaultCalendarForNewEvents
+        
+        let alarm = EKAlarm(relativeOffset: -60 * calendarEvent.alarmTime)
+        event.addAlarm(alarm)   // 事件前幾分鐘提醒
+        
+        return event
+    }
+}
+
 extension String {
-    func toDate() -> Date {
-        // 創建一個 DateFormatter 實例
+    func yyyyMMddHHmmToDate() -> Date {
+        return self.toDate(format: "yyyyMMddHHmm")
+    }
+    
+    func toDate(format: String) -> Date {
         let dateFormatter = DateFormatter()
-
-        // 設定日期字串的格式
-        dateFormatter.dateFormat = "yyyyMMddHHmm"
-
-        // 解析日期字串，轉換成 Date 物件
+        dateFormatter.dateFormat = format
+        
         if let date = dateFormatter.date(from: self) {
-            print("vvv_Converted Date: \(date)")
             return date
         } else {
-            print("vvv_Date conversion failed")
             return Date()
         }
     }

@@ -17,18 +17,28 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="aqv-Ki-fXg">
-                                <rect key="frame" x="145.66666666666666" y="408.66666666666669" width="101.66666666666666" height="35"/>
+                                <rect key="frame" x="126" y="408.66666666666669" width="141" height="35"/>
+                                <state key="normal" title="Button"/>
+                                <buttonConfiguration key="configuration" style="plain" title="Show Edit View"/>
+                                <connections>
+                                    <action selector="ShowEditViewBtn:" destination="BYZ-38-t0r" eventType="touchUpInside" id="qhv-Jp-Ie2"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="system" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="r04-uN-F4q">
+                                <rect key="frame" x="145.66666666666666" y="493.66666666666669" width="102" height="35.000000000000057"/>
                                 <state key="normal" title="Button"/>
                                 <buttonConfiguration key="configuration" style="plain" title="Add Event"/>
                                 <connections>
-                                    <action selector="AddEventBtn:" destination="BYZ-38-t0r" eventType="touchUpInside" id="uma-Ih-dR3"/>
+                                    <action selector="AddEventBtn:" destination="BYZ-38-t0r" eventType="touchUpInside" id="yf0-vE-Vo2"/>
                                 </connections>
                             </button>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" systemColor="systemBackgroundColor"/>
                         <constraints>
+                            <constraint firstItem="r04-uN-F4q" firstAttribute="top" secondItem="aqv-Ki-fXg" secondAttribute="bottom" constant="50" id="JRT-4J-2W5"/>
                             <constraint firstItem="aqv-Ki-fXg" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="RJk-K9-04v"/>
+                            <constraint firstItem="r04-uN-F4q" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="a0Z-Ba-KDB"/>
                             <constraint firstItem="aqv-Ki-fXg" firstAttribute="centerY" secondItem="8bC-Xf-vdC" secondAttribute="centerY" id="iCd-SF-Eyu"/>
                         </constraints>
                     </view>
